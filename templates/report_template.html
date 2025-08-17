@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ month }} Sales Report</title>
+</head>
+<body>
+    <h1>{{ month }} Sales Report</h1>
+    <ul>
+        <li>Start Date: {{ insights.start_date }}</li>
+        <li>End Date: {{ insights.end_date }}</li>
+        <li>Total Sales: {{ insights.total_sales }}</li>
+        <li>Average Order: {{ insights.avg_order }}</li>
+        <li>Top Product: {{ insights.top_product }}</li>
+    </ul>
+    <img src="{{ sales_trend }}" alt="Sales Trend">
+    <img src="{{ product_dist }}" alt="Product Distribution">
+</body>
+</html>

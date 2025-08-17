@@ -7,7 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
-
+from jinja2 import Template
 import json
 # ...existing imports...
 
@@ -85,6 +85,25 @@ def email_report(month, report_dir,recipient,sender):
     server = smtplib.SMTP('localhost', 1025)
     server.sendmail(msg['From'], [msg['To']], msg.as_string())
     server.quit()
+def generate_html_report(insights, month, report_dir):
+    template_path = os.path.join("templates", "report_template.html")
+    with open(template_path) as f:
+        template = Template(f.read())
+    html = template.render(
+        month=month,
+        insights=insights,
+        sales_trend=f"{report_dir}/sales_trend.png",
+        product_dist=f"{report_dir}/product_dist.png"
+    )
+    html_path = f"{report_dir}/report.html"
+    with open(html_path, "w") as f:
+        f.write(html)
+    return html_path
+
+def generate_pdf_report(html_path, report_dir):
+    pdf_path = f"{report_dir}/report.pdf"
+    pdfkit.from_file(html_path, pdf_path)
+    return pdf_path
 
 def generate_report(csv_path,recipient):
     """Main analysis workflow"""
@@ -98,6 +117,10 @@ def generate_report(csv_path,recipient):
     
     # Save metrics to CSV
     pd.DataFrame([insights]).to_csv(f"{report_dir}/metrics.csv", index=False)
+    # Generate HTML and PDF reports
+    html_path = generate_html_report(insights, month, report_dir)
+    pdf_path = generate_pdf_report(html_path, report_dir)
+
     # Email report if recipient is provided
     if recipient:
         email_report(month, report_dir, recipient,sender)
