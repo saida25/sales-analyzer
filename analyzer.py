@@ -2,6 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
 
 def load_sales_data(filepath):
     """Load and preprocess CSV"""
@@ -40,6 +45,40 @@ def create_plots(df, report_dir):
     plt.savefig(f"{report_dir}/product_dist.png")
     plt.close()
 
+def email_report(month, report_dir, recipient):
+    msg = MIMEMultipart()
+    msg['Subject'] = f"{month.capitalize()} Sales Report"
+    msg['From'] = "your@email.com"
+    msg['To'] = recipient
+
+    # Attach metrics CSV
+    metrics_path = f"{report_dir}/metrics.csv"
+    with open(metrics_path, "rb") as f:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="metrics.csv"')
+        msg.attach(part)
+
+    # Attach images
+    for img in ["sales_trend.png", "product_dist.png"]:
+        img_path = f"{report_dir}/{img}"
+        with open(img_path, "rb") as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{img}"')
+            msg.attach(part)
+
+    # Optional: add a message body
+    msg.attach(MIMEText(f"Please find attached the {month.capitalize()} sales report.", "plain"))
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login("your@email.com", "app-password")
+    server.sendmail(msg['From'], [msg['To']], msg.as_string())
+    server.quit()
+
 def generate_report(csv_path):
     """Main analysis workflow"""
     df = load_sales_data(csv_path)
@@ -52,11 +91,15 @@ def generate_report(csv_path):
     
     # Save metrics to CSV
     pd.DataFrame([insights]).to_csv(f"{report_dir}/metrics.csv", index=False)
+    # Email report if recipient is provided
+    if recipient:
+        email_report(month, report_dir, recipient)
     return insights
 
+
 if __name__ == "__main__":
+    recipient = "saida.yengui@gmail.com"  # <-- Set recipient email here
     for csv_file in os.listdir("data"):
         if csv_file.endswith(".csv"):
             print(f"📊 Processing {csv_file}...")
-            results = generate_report(f"data/{csv_file}")
-            print(f"✅ Generated report for {results['start_date']} to {results['end_date']}")
+            results = generate_report(f"data/{csv_file}", recipient)            print(f"✅ Generated report for {results['start_date']} to {results['end_date']}")
