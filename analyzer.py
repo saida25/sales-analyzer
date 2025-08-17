@@ -1,77 +1,62 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
-import logging
 from datetime import datetime
-from typing import Dict, Optional
+import os
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='sales_analysis.log'
-)
+def load_sales_data(filepath):
+    """Load and preprocess CSV"""
+    df = pd.read_csv(filepath)
+    # Ensure 'date' is datetime
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    df['total'] = df['quantity'] * df['unit_price']
+    return df
 
-class SalesAnalyzer:
-    REQUIRED_COLUMNS = {'date', 'product', 'quantity', 'unit_price'}
+def generate_insights(df):
+    """Calculate key metrics"""
+    return {
+        'start_date': df['date'].min().strftime('%Y-%m-%d'),
+        'end_date': df['date'].max().strftime('%Y-%m-%d'),
+        'total_sales': f"${df['total'].sum():,.2f}",
+        'avg_order': f"${df['total'].mean():,.2f}",
+        'top_product': df.groupby('product')['total'].sum().idxmax()
+    }
+
+def create_plots(df, report_dir):
+    """Generate visualization files"""
+    # Sales trend
+    plt.figure(figsize=(10,5))
+    df.groupby(df['date'].dt.date)['total'].sum().plot(
+        kind='line', 
+        title='Daily Sales Trend',
+        color='teal'
+    )
+    plt.savefig(f"{report_dir}/sales_trend.png")
+    plt.close()
+
+    # Product distribution
+    df.groupby('product')['total'].sum().plot.pie(
+        autopct='%1.1f%%',
+        figsize=(8,8))
+    plt.savefig(f"{report_dir}/product_dist.png")
+    plt.close()
+
+def generate_report(csv_path):
+    """Main analysis workflow"""
+    df = load_sales_data(csv_path)
+    month = pd.to_datetime(df['date'].iloc[0]).strftime('%B')
+    report_dir = f"reports/{month.lower()}"
+    os.makedirs(report_dir, exist_ok=True)
+
+    insights = generate_insights(df)
+    create_plots(df, report_dir)
     
-    def __init__(self):
-        self.report_dir = "reports"
-        os.makedirs(self.report_dir, exist_ok=True)
+    # Save metrics to CSV
+    pd.DataFrame([insights]).to_csv(f"{report_dir}/metrics.csv", index=False)
+    return insights
 
-    def _validate_dataframe(self, df: pd.DataFrame) -> bool:
-        """Check for required columns and valid data types"""
-        if not self.REQUIRED_COLUMNS.issubset(df.columns):
-            logging.error(f"Missing columns. Required: {self.REQUIRED_COLUMNS}")
-            return False
-        
-        try:
-            pd.to_numeric(df['quantity'])
-            pd.to_numeric(df['unit_price'])
-            pd.to_datetime(df['date'])
-        except ValueError as e:
-            logging.error(f"Data type error: {str(e)}")
-            return False
-            
-        return True
-
-    def load_sales_data(self, filepath: str) -> Optional[pd.DataFrame]:
-        """Load and validate CSV file"""
-        try:
-            df = pd.read_csv(filepath)
-            if not self._validate_dataframe(df):
-                return None
-                
-            df['date'] = pd.to_datetime(df['date'])
-            df['total'] = df['quantity'] * df['unit_price']
-            return df
-            
-        except Exception as e:
-            logging.error(f"Failed to load {filepath}: {str(e)}")
-            return None
-
-    def generate_report(self, csv_path: str) -> Optional[Dict]:
-        """Full report generation pipeline"""
-        try:
-            df = self.load_sales_data(csv_path)
-            if df is None or df.empty:
-                return None
-                
-            month = df['date'].dt.strftime('%B').iloc[0]
-            report_dir = f"{self.report_dir}/{month.lower()}"
-            os.makedirs(report_dir, exist_ok=True)
-            
-            insights = self._calculate_metrics(df)
-            self._generate_visualizations(df, report_dir)
-            
-            metrics_path = f"{report_dir}/metrics.csv"
-            pd.DataFrame([insights]).to_csv(metrics_path, index=False)
-            
-            logging.info(f"Report generated: {metrics_path}")
-            return insights
-            
-        except Exception as e:
-            logging.critical(f"Report generation failed: {str(e)}")
-            return None
-
-    # ... (rest of the methods remain similar but with try-catch blocks)
+if __name__ == "__main__":
+    for csv_file in os.listdir("data"):
+        if csv_file.endswith(".csv"):
+            print(f"📊 Processing {csv_file}...")
+            results = generate_report(f"data/{csv_file}")
+            print(f"✅ Generated report for {results['start_date']} to {results['end_date']}")
