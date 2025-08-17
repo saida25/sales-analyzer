@@ -8,6 +8,13 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 
+import json
+# ...existing imports...
+
+def load_config(config_path="config.json"):
+    with open(config_path) as f:
+        return json.load(f)
+
 def load_sales_data(filepath):
     """Load and preprocess CSV"""
     df = pd.read_csv(filepath)
@@ -79,7 +86,7 @@ def email_report(month, report_dir, recipient):
     server.sendmail(msg['From'], [msg['To']], msg.as_string())
     server.quit()
 
-def generate_report(csv_path):
+def generate_report(csv_path,recipient):
     """Main analysis workflow"""
     df = load_sales_data(csv_path)
     month = pd.to_datetime(df['date'].iloc[0]).strftime('%B')
@@ -98,8 +105,9 @@ def generate_report(csv_path):
 
 
 if __name__ == "__main__":
-    recipient = "saida.yengui@gmail.com"  # <-- Set recipient email here
+    config = load_config()
     for csv_file in os.listdir("data"):
         if csv_file.endswith(".csv"):
             print(f"📊 Processing {csv_file}...")
-            results = generate_report(f"data/{csv_file}", recipient)            print(f"✅ Generated report for {results['start_date']} to {results['end_date']}")
+            results = generate_report(f"data/{csv_file}", recipient)            
+            print(f"✅ Generated report for {results['start_date']} to {results['end_date']}")
