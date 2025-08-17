@@ -8,6 +8,8 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 from jinja2 import Template
+import pdfkit
+
 import json
 # ...existing imports...
 
