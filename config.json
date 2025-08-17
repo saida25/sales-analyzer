@@ -1,6 +1,6 @@
 {
-    "sender": "saida.yengui@gmail.com",
+    "sender": "Python Debug Server",
     "password": "app-password",
-    "recipient": "saida.yengui@gmail.com",
+    "recipient": "test@gmail.com",
     "csv_dir": "data"
 }

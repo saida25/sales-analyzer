@@ -11,7 +11,8 @@ from email import encoders
 import json
 # ...existing imports...
 
-def load_config(config_path="config.json"):
+def load_config(config_filename="config.json"):
+    config_path = os.path.join(os.path.dirname(__file__), config_filename)
     with open(config_path) as f:
         return json.load(f)
 
@@ -52,10 +53,11 @@ def create_plots(df, report_dir):
     plt.savefig(f"{report_dir}/product_dist.png")
     plt.close()
 
-def email_report(month, report_dir, recipient):
+def email_report(month, report_dir,recipient,sender):
+    print(f"DEBUG: Entered email_report for {month}, recipient={recipient}, sender={sender}")  # <--- Add this line
     msg = MIMEMultipart()
     msg['Subject'] = f"{month.capitalize()} Sales Report"
-    msg['From'] = "your@email.com"
+    msg['From'] = sender if sender else "debug@example.com"
     msg['To'] = recipient
 
     # Attach metrics CSV
@@ -80,9 +82,7 @@ def email_report(month, report_dir, recipient):
     # Optional: add a message body
     msg.attach(MIMEText(f"Please find attached the {month.capitalize()} sales report.", "plain"))
 
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.starttls()
-    server.login("your@email.com", "app-password")
+    server = smtplib.SMTP('localhost', 1025)
     server.sendmail(msg['From'], [msg['To']], msg.as_string())
     server.quit()
 
@@ -100,12 +100,13 @@ def generate_report(csv_path,recipient):
     pd.DataFrame([insights]).to_csv(f"{report_dir}/metrics.csv", index=False)
     # Email report if recipient is provided
     if recipient:
-        email_report(month, report_dir, recipient)
+        email_report(month, report_dir, recipient,sender)
     return insights
-
 
 if __name__ == "__main__":
     config = load_config()
+    recipient = config.get("recipient") 
+    sender=config.get("sender")
     for csv_file in os.listdir("data"):
         if csv_file.endswith(".csv"):
             print(f"📊 Processing {csv_file}...")
